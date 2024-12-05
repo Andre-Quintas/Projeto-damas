@@ -7,31 +7,33 @@ public class View {
 	GameManager game;
 
 	View() {
-		game = new GameManager();
-		board = new Board("Turno das " + (game.getIsBlackTurn() ? "Pretas" : "Brancas"), 8, 8, 100);
+		int size = 6;
+		game = new GameManager(size);
+		board = new Board("Turno das " + (!game.getIsBlackTurn() ? "Pretas" : "Brancas"), size, size, 100);
 		board.setIconProvider(this::icon);
 		board.addMouseListener(this::click);
 		board.setBackgroundProvider(this::background);
 	}
 	
 	void click(int line, int col) {
-		if (game.hasRedSquares()) {
-			if (game.isRedSquare(new Position(line, col))) {
-				game.setSelectedPawn(new Position(line, col));
-				Position[] newYellowSquares = game.getLegalMoves(game.getFieldPos(new Position(line, col)), line, col);
-				for (int i = 0; i < newYellowSquares.length; i++)
-					game.addYellowSquare(newYellowSquares[i]);
-				 
-			}
+		if (game.isGameOver())
 			return;
+		if (game.isRedSquare(new Position(line, col))) {
+			game.setSelectedPawn(new Position(line, col));
+			game.clearYellowSquares();
+			Position[] newYellowSquares = game.getLegalMoves(game.getFieldPos(new Position(line, col)), line, col);
+			for (int i = 0; i < newYellowSquares.length; i++)
+				game.addYellowSquare(newYellowSquares[i]);
 		}
 		if (game.isYellowSquare(new Position(line, col)) && !game.isPawn(new Position(line, col))) {
 			game.movePawn(game.getSelectedPawn(), new Position(line, col));
 			game.clearYellowSquares();
-			game.clearRedSquares();
-			game.changeTurn();
+			if (game.hasRedSquares() && game.canEat(game.getFieldPos(new Position(line, col)), line, col))
+				game.refreshRedSquares();
+			else 
+				game.changeTurn();	
 		}
-		else {
+		else if (!game.hasRedSquares()) {
 			game.clearYellowSquares();
 			if (game.isPawn(new Position(line, col))) {
 				if (game.getIsBlackTurn() == (game.getFieldPos(new Position(line, col)).getColor() == "black.png")) {
@@ -43,7 +45,10 @@ public class View {
 				}
 			}
 		}
-		board.setTitle("Turno das " + (game.getIsBlackTurn() ? "Pretas" : "Brancas"));
+		if (game.isGameOver())
+			board.setTitle(game.getWinner()); 
+		else
+			board.setTitle("Turno das " + (game.getIsBlackTurn() ? "Pretas" : "Brancas"));
 	}
 	
 	String icon(int line, int col) {	
@@ -67,6 +72,7 @@ public class View {
 
 	void start() {
 		board.open();
+		game.changeTurn();
 	}
 	
 	public static void main(String[] args) {

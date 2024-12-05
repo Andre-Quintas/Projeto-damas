@@ -19,17 +19,83 @@ public class GameManager {
 	private Position[] yellowSquares = new Position[16];
 	private Position[] redSquares = new Position[16];
 	private Position selectedPawn;
-	private boolean isBlackTurn = false;
+	private boolean isBlackTurn = true;
+	private boolean gameOver = false;
 	
 	public GameManager() {
-		fieldInit();
+		fieldInit(8);
 	}
+	
+	public GameManager(int size) {
+		fieldInit(size);
+	}
+	
+	/*public GameManager() {
+		fieldInit();
+	}*/
+	
+	public boolean canMove(Pawn pawn, int line, int col) {
+		return getLegalMoves(pawn, line, col).length > 0;
+	}
+	
+	public boolean canAnyMove(String color) {
+		for (int i = 0; i < field.length; i++) {
+			for (int j = 0; j < field[0].length; j++) {
+				Pawn pawn = getFieldPos(new Position(i, j));
+				if (pawn != null && color == pawn.getColor() && canMove(pawn, i, j))
+					return true;
+			}
+		}
+		return false;
+	}
+	
+	public int getPawnCount(String color) {
+		int count = 0;
+		for (int i = 0; i < field.length; i++) {
+			for (int j = 0; j < field[0].length; j++) {
+				Pawn pawn = getFieldPos(new Position(i, j));
+				if (pawn != null && color == pawn.getColor())
+					count++;
+			}
+		}
+		return count;
+	}
+	
 	public boolean getIsBlackTurn() {
 		return this.isBlackTurn;
 	}
 	
+	public String getWinner() {
+		int blackCount = getPawnCount("black.png");
+		int whiteCount = getPawnCount("white.png");
+		
+		if (blackCount == whiteCount)
+			return "EMPATE";
+		return blackCount > whiteCount ? "VENCEDOR: PRETO" : "VENCEDOR: BRANCO"; 
+	}
+	
+	private void gameOver() {
+		this.gameOver = true;
+		clearRedSquares();
+		clearYellowSquares();
+	}
+	
+	public boolean isGameOver() {
+		return this.gameOver;
+	}
+	
 	public void changeTurn() {
 		this.isBlackTurn = !this.isBlackTurn;
+		refreshRedSquares();
+		if ((!canAnyMove("black.png") && this.isBlackTurn) || (!canAnyMove("white.png") && !this.isBlackTurn)) {
+			gameOver();
+			return;
+		}
+		
+	}
+	
+	public void refreshRedSquares() {
+		clearRedSquares();
 		redSquares = getMandatoryMoves();
 	}
 	
@@ -105,7 +171,7 @@ public class GameManager {
 					if (isInsideField(next) && !isPawn(next) && getFieldPos(pos[i]).getColor() != color)
 						positions[firstAvailableIndex(positions)] = next;
 				}
-				else {
+				else if (!hasRedSquares()){
 					positions[firstAvailableIndex(positions)] = pos[i];
 				}
 			}
@@ -162,15 +228,15 @@ public class GameManager {
 		return res;
 	}
 	
-	private void fieldInit() {
-		field = new Pawn[8][8];
+	private void fieldInit(int size) {
+		field = new Pawn[size][size];
 		for (int i = 0; i < field.length; i++) {
 			for (int j = 0; j < field[0].length; j++) {
 				Pawn newPawn = null;
 				if ((i + j) % 2 == 0) {
-					if (i < 3)
+					if (i < (size - 2)/2)
 						newPawn = new Pawn("black.png");
-					else if (i > 4)
+					else if (i > size/2)
 						newPawn = new Pawn("white.png");
 				}
 				field[i][j] = newPawn;
@@ -184,16 +250,5 @@ public class GameManager {
 	
 	public Pawn getFieldPos(Position pos) {
 		return this.field[pos.line()][pos.col()];
-	}
-	
-	public String showField() {		
-		String text = "";
-		for (int i = 0; i < 8; i++) {
-			for (int j = 0; j < 8; j++) {
-				text += (this.field[i][j] == null ? "  " : this.field[i][j].toString()) + ",";
-			}
-			text += "\n";
-		}
-		return text;
 	}
 }
