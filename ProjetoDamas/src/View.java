@@ -15,18 +15,29 @@ public class View {
 	}
 	
 	void click(int line, int col) {
+		if (game.hasRedSquares()) {
+			if (game.isRedSquare(new Position(line, col))) {
+				game.setSelectedPawn(new Position(line, col));
+				Position[] newYellowSquares = game.getLegalMoves(game.getFieldPos(new Position(line, col)), line, col);
+				for (int i = 0; i < newYellowSquares.length; i++)
+					game.addYellowSquare(newYellowSquares[i]);
+				 
+			}
+			return;
+		}
 		if (game.isYellowSquare(new Position(line, col)) && !game.isPawn(new Position(line, col))) {
 			game.movePawn(game.getSelectedPawn(), new Position(line, col));
-			game.changeTurn();
 			game.clearYellowSquares();
+			game.clearRedSquares();
+			game.changeTurn();
 		}
 		else {
 			game.clearYellowSquares();
 			if (game.isPawn(new Position(line, col))) {
-				if (game.getIsBlackTurn() == (game.getFieldPos(line, col).getColor() == "black.png")) {
+				if (game.getIsBlackTurn() == (game.getFieldPos(new Position(line, col)).getColor() == "black.png")) {
 					game.addYellowSquare(new Position(line, col));
 					game.setSelectedPawn(new Position(line, col));
-					Position[] newYellowSquares = game.getLegalMoves(game.getFieldPos(line, col), line, col);
+					Position[] newYellowSquares = game.getLegalMoves(game.getFieldPos(new Position(line, col)), line, col);
 					for (int i = 0; i < newYellowSquares.length; i++)
 						game.addYellowSquare(newYellowSquares[i]);
 				}
@@ -36,14 +47,19 @@ public class View {
 	}
 	
 	String icon(int line, int col) {	
-		if (game.getFieldPos(line, col) != null)
-			return game.getFieldPos(line, col).getColor();
+		if (game.getFieldPos(new Position(line, col)) != null)
+			return game.getFieldPos(new Position(line, col)).getColor();
 		return null;
 	}
 	
 	Color background(int line, int col) {
-		if (game.isYellowSquare(new Position(line, col)))
+		if (game.isRedSquare(new Position(line, col)))
+			return StandardColor.RED;
+		if (game.isYellowSquare(new Position(line, col))) {
+			if (game.isPawn(new Position(line, col)))
+				return StandardColor.GRAY;
 			return StandardColor.YELLOW;
+		}
 		else if ((line + col) % 2 == 0)
 			return StandardColor.BLACK;
 		return StandardColor.WHITE;

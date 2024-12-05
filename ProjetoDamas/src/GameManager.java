@@ -1,25 +1,36 @@
 
 record Position(int line, int col) {
 	
+	public int distance(Position pos) {
+		int d = Math.abs(pos.line() - this.line) + Math.abs(pos.col() - this.col);
+		return d;
+	}
+	
+	public Position getMiddle(Position pos) {
+		int line = this.line + ((this.line - pos.line()) > 0 ? -1 : 1);
+		int col =  this.col + ((this.col - pos.col()) > 0 ? -1 : 1);
+		return new Position(line, col);
+	}
 }
 
 public class GameManager {
 	
 	private Pawn[][] field;
-	private Position[] yellowSquares = new Position[32];
+	private Position[] yellowSquares = new Position[16];
+	private Position[] redSquares = new Position[16];
 	private Position selectedPawn;
 	private boolean isBlackTurn = false;
 	
 	public GameManager() {
 		fieldInit();
 	}
-	
 	public boolean getIsBlackTurn() {
 		return this.isBlackTurn;
 	}
 	
 	public void changeTurn() {
 		this.isBlackTurn = !this.isBlackTurn;
+		redSquares = getMandatoryMoves();
 	}
 	
 	public Position getSelectedPawn() {
@@ -39,33 +50,65 @@ public class GameManager {
 	}
 	
 	public void movePawn(Position origin, Position target) {
+		if (origin.distance(target) > 2) {
+			Position middle = origin.getMiddle(target);
+			this.field[middle.line()][middle.col()] = null;
+		}
 		this.field[target.line()][target.col()] = this.field[origin.line()][origin.col()];
 		this.field[origin.line()][origin.col()] = null;
+	}
+	
+	private Position[] getMandatoryMoves() {
+		Position[] redSquares = new Position[16];
+		for (int i = 0; i < field.length; i++) {
+			for (int j = 0; j < field[0].length; j++) {
+				if (isPawn(new Position(i, j))) {
+					boolean blackPawn = getFieldPos(new Position(i, j)).getColor() == "black.png";
+					redSquares[firstAvailableIndex(redSquares)] = (blackPawn == isBlackTurn) && (canEat(getFieldPos(new Position(i, j)), i, j)) ? (new Position(i, j)) : null;
+				}
+			}
+		}
+		return removeNulls(redSquares);
+	}
+	
+	public boolean canEat(Pawn pawn, int line, int col) {
+		String color = pawn.getColor();
+		Position left = new Position(color == "black.png" ? line+1 : line-1, col-1);
+		Position right = new Position(color == "black.png" ? line+1 : line-1, col+1);
+		
+		Position[] pos = {left, right};
+		
+		for (int i = 0; i < 2; i++) {
+			if (isInsideField(pos[i])) {
+				if (isPawn(pos[i])) {
+					Position next = new Position(color == "black.png" ? line+2 : line-2, col + (i==0 ? -2 : 2));
+					if (isInsideField(next) && !isPawn(next) && getFieldPos(pos[i]).getColor() != color)
+						return true;
+				}
+			}
+		}
+		return false;
 	}
 	
 	public Position[] getLegalMoves(Pawn pawn, int line, int col) {
 		Position[] positions = new Position[32];
 		String color = pawn.getColor();
+		Position left = new Position(color == "black.png" ? line+1 : line-1, col-1);
+		Position right = new Position(color == "black.png" ? line+1 : line-1, col+1);
 		
-		if (color == "black.png") {
-			if (line == 7)
-				return new Position[] {};
-			if (col != 0)
-				if (!isPawn(new Position(line+1, col-1)))
-					positions[firstAvailableIndex(positions)] = new Position(line+1, col-1);
-			if (col != 7)
-				if (!isPawn(new Position(line+1, col+1)))
-					positions[firstAvailableIndex(positions)] = new Position(line+1, col+1);
-		}
-		else {
-			if (line == 0)
-				return new Position[] {};
-			if (col != 0)
-				if (!isPawn(new Position(line-1, col-1)))
-					positions[firstAvailableIndex(positions)] = new Position(line-1, col-1);
-			if (col != 7)
-				if (!isPawn(new Position(line-1, col+1)))
-					positions[firstAvailableIndex(positions)] = new Position(line-1, col+1);
+		Position[] pos = {left, right};
+		
+		for (int i = 0; i < 2; i++) {
+			if (isInsideField(pos[i])) {
+				if (isPawn(pos[i])) {
+					Position next = new Position(color == "black.png" ? line+2 : line-2, col + (i==0 ? -2 : 2));
+					if (isInsideField(next) && !isPawn(next) && getFieldPos(pos[i]).getColor() != color)
+						positions[firstAvailableIndex(positions)] = next;
+				}
+				else {
+					positions[firstAvailableIndex(positions)] = pos[i];
+				}
+			}
 		}
 		return removeNulls(positions);
 	}
@@ -82,7 +125,11 @@ public class GameManager {
 	}
 	
 	public void clearYellowSquares() {
-		this.yellowSquares = new Position[32];
+		this.yellowSquares = new Position[16];
+	}
+	
+	public void clearRedSquares() {
+		this.redSquares = new Position[16];
 	}
 	
 	public boolean isYellowSquare(Position pos) {
@@ -95,10 +142,30 @@ public class GameManager {
 		return false;
 	}
 	
+	public boolean isRedSquare(Position pos) {
+		for (int i = 0; i<this.redSquares.length; i++) {
+			if (redSquares[i] == null)
+				break;
+			else if (redSquares[i].equals(pos))
+				return true;
+		}
+		return false;
+	}
+	
+	public boolean hasRedSquares() {
+		return firstAvailableIndex(redSquares) > 0;
+	}
+	
+	private boolean isInsideField(Position pos) {
+		boolean res = (pos.line() >= 0 && pos.line() < field.length);
+		res = res && (pos.col() >= 0 && pos.col() < field[0].length);
+		return res;
+	}
+	
 	private void fieldInit() {
 		field = new Pawn[8][8];
-		for (int i = 0; i < 8; i++) {
-			for (int j = 0; j < 8; j++) {
+		for (int i = 0; i < field.length; i++) {
+			for (int j = 0; j < field[0].length; j++) {
 				Pawn newPawn = null;
 				if ((i + j) % 2 == 0) {
 					if (i < 3)
@@ -112,14 +179,14 @@ public class GameManager {
 	}
 	
 	public boolean isPawn(Position pos) {
-		return !(field[pos.line()][pos.col()] == null);
+		return field[pos.line()][pos.col()] != null;
 	}
 	
-	public Pawn getFieldPos(int line, int col) {
-		return this.field[line][col];
+	public Pawn getFieldPos(Position pos) {
+		return this.field[pos.line()][pos.col()];
 	}
 	
-	public String showField() {
+	public String showField() {		
 		String text = "";
 		for (int i = 0; i < 8; i++) {
 			for (int j = 0; j < 8; j++) {
