@@ -1,3 +1,11 @@
+import java.io.PrintWriter;
+import java.util.Scanner;
+import java.io.File;
+import java.io.FileNotFoundException;
+
+record LoadData(Pawn[][] newField, boolean isBlack) {
+	
+}
 
 record Position(int line, int col) {
 	
@@ -30,9 +38,10 @@ public class GameManager {
 		fieldInit(size);
 	}
 	
-	/*public GameManager() {
-		fieldInit();
-	}*/
+	public GameManager(Pawn[][] newField, boolean isBlack) {
+		isBlackTurn = isBlack;
+		field = newField;
+	}
 	
 	public boolean canMove(Pawn pawn, int line, int col) {
 		return getLegalMoves(pawn, line, col).length > 0;
@@ -87,16 +96,36 @@ public class GameManager {
 	public void changeTurn() {
 		this.isBlackTurn = !this.isBlackTurn;
 		refreshRedSquares();
-		if ((!canAnyMove("black.png") && this.isBlackTurn) || (!canAnyMove("white.png") && !this.isBlackTurn)) {
+		if ((!canAnyMove("black.png") && this.isBlackTurn) || (!canAnyMove("white.png") && !this.isBlackTurn))
 			gameOver();
-			return;
-		}
-		
 	}
 	
 	public void refreshRedSquares() {
 		clearRedSquares();
 		redSquares = getMandatoryMoves();
+	}
+	
+	public Position getRandomRed() {
+		Position[] cleanRedSquares = removeNulls(redSquares);
+		int r = (int)(Math.random() * cleanRedSquares.length);
+		return cleanRedSquares[r];
+	}
+	
+	public Position getRandomYellow() {
+		Position[] cleanYellowSquares = removeNulls(yellowSquares);
+		int r = (int)(Math.random() * cleanYellowSquares.length);
+		return !cleanYellowSquares[r].equals(selectedPawn) ? cleanYellowSquares[r] : getRandomYellow();
+	}
+	
+	public Position getRandomPlayablePawnPos(String color) {
+		int line = (int)(Math.random() * field.length);
+		int col = (int)(Math.random() * field[0].length);
+		
+		Pawn pawn = getFieldPos(new Position(line, col));
+		if (pawn != null && pawn.getColor() == color)
+			if (canMove(pawn, line, col) || canEat(pawn, line, col))
+				return new Position(line, col);
+		return getRandomPlayablePawnPos(color);
 	}
 	
 	public Position getSelectedPawn() {
@@ -157,7 +186,7 @@ public class GameManager {
 	}
 	
 	public Position[] getLegalMoves(Pawn pawn, int line, int col) {
-		Position[] positions = new Position[32];
+		Position[] positions = new Position[16];
 		String color = pawn.getColor();
 		Position left = new Position(color == "black.png" ? line+1 : line-1, col-1);
 		Position right = new Position(color == "black.png" ? line+1 : line-1, col+1);
@@ -222,6 +251,10 @@ public class GameManager {
 		return firstAvailableIndex(redSquares) > 0;
 	}
 	
+	public boolean hasYellowSquares() {
+		return firstAvailableIndex(yellowSquares) > 0;
+	}
+	
 	private boolean isInsideField(Position pos) {
 		boolean res = (pos.line() >= 0 && pos.line() < field.length);
 		res = res && (pos.col() >= 0 && pos.col() < field[0].length);
@@ -235,9 +268,9 @@ public class GameManager {
 				Pawn newPawn = null;
 				if ((i + j) % 2 == 0) {
 					if (i < (size - 2)/2)
-						newPawn = new Pawn("black.png");
+						newPawn = new Pawn('b');
 					else if (i > size/2)
-						newPawn = new Pawn("white.png");
+						newPawn = new Pawn('w');
 				}
 				field[i][j] = newPawn;
 			}
@@ -250,5 +283,46 @@ public class GameManager {
 	
 	public Pawn getFieldPos(Position pos) {
 		return this.field[pos.line()][pos.col()];
+	}
+	
+	public void save(String fileName) {
+		try {
+			PrintWriter writer = new PrintWriter(new File(fileName));
+			writer.println(field.length);
+			writer.println(isBlackTurn);
+			for (int i = 0; i < field.length; i++) {
+				for (int j = 0; j < field[0].length; j++) {
+					writer.print(field[i][j] == null ? ' ' : field[i][j].getChar() );
+				}
+				writer.println();
+			}
+			writer.close();
+		
+		} catch (FileNotFoundException e) {
+			System.err.println(e.getLocalizedMessage());
+		}
+	}
+	
+	public LoadData load(String fileName) {
+		try {
+			Scanner scanner = new Scanner(new File(fileName));
+			int size = scanner.nextInt();
+			Pawn[][] newField = new Pawn[size][size];
+			boolean isBlack = scanner.nextBoolean();
+			scanner.nextLine();
+			for (int i = 0; i < size; i++) {
+				String line = scanner.nextLine();
+				for (int j = 0; j < size; j++) {
+					char c = line.charAt(j);
+					newField[i][j] = c == ' ' ? null : new Pawn(c);
+				}
+			}
+			scanner.close();
+			return new LoadData(newField, isBlack);
+			
+		} catch (FileNotFoundException e) {
+			System.err.println(e.getLocalizedMessage());
+			return null;
+		}
 	}
 }

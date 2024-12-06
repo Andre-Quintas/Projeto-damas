@@ -3,16 +3,16 @@ public class Pawn {
 	
 	private String color; //"black.png" ou "white.png"
 	
-	public Pawn(String color) {
-		this.color = color;
+	public Pawn(char color) {
+		this.color = color == 'b' ? "black.png" : "white.png";
 	}
 	
 	public String getColor() {
 		return this.color;
 	}
 	
-	public String toString() {
-		return (color == "black.png" ? "B" : "W");
+	public char getChar() {
+		return (color == "black.png" ? 'b' : 'w');
 	}
 	
 }

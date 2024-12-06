@@ -7,12 +7,82 @@ public class View {
 	GameManager game;
 
 	View() {
-		int size = 6;
+		game = new GameManager();
+		board = new Board("Turno das " + (!game.getIsBlackTurn() ? "Pretas" : "Brancas"), 8, 8, 100);
+		viewSetup();
+	}
+	
+	View(int size) {
 		game = new GameManager(size);
 		board = new Board("Turno das " + (!game.getIsBlackTurn() ? "Pretas" : "Brancas"), size, size, 100);
+		viewSetup();
+	}
+	
+	View(LoadData loadData) {
+		Pawn[][] newField = loadData.newField();
+		boolean isBlack = loadData.isBlack();
+		game = new GameManager(newField, !isBlack);
+		int size = newField.length;
+		board = new Board("Turno das " + (!game.getIsBlackTurn() ? "Pretas" : "Brancas"), size, size, 100);
+		viewSetup();
+	}
+	
+	void viewSetup() {
 		board.setIconProvider(this::icon);
 		board.addMouseListener(this::click);
 		board.setBackgroundProvider(this::background);
+		board.addAction("aleatoria", this::random);
+		board.addAction("novo", this::newBoard);
+		board.addAction("gravar", this::save);
+		board.addAction("carregar", this::load);
+	}
+	
+	void newBoard() {
+		try {
+			int size = board.promptInt("Tamanho?");
+			View newView = new View(size);
+			newView.start();
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
+	}
+	
+	void random() {
+		if (game.isGameOver())
+			return;
+		if (game.hasRedSquares() && !game.hasYellowSquares()) {
+			Position randomRed = game.getRandomRed();
+			click(randomRed.line(), randomRed.col());
+			random();
+		} else if (game.hasYellowSquares()){
+			Position randomYellow = game.getRandomYellow();
+			click(randomYellow.line(), randomYellow.col());
+		} else {
+			String currentTurn = game.getIsBlackTurn() ? "black.png" : "white.png";
+			Position randomPawn = game.getRandomPlayablePawnPos(currentTurn);
+			click(randomPawn.line(), randomPawn.col());
+			random();
+		}
+	}
+	
+	void save() {
+		try {
+			String fileName = board.promptText("Nome do Ficheiro?");
+			game.save(fileName + ".damas");
+		} catch (Exception e){
+			System.err.println(e.getMessage());
+		}
+	}
+	
+	void load() {
+		try {
+			String fileName = board.promptText("Nome do Ficheiro?");
+			LoadData loadData = game.load(fileName + ".damas");
+			View newView = new View(loadData);
+			newView.start();
+		} catch (Exception e){
+			System.err.println(e.getMessage());
+		}
 	}
 	
 	void click(int line, int col) {
@@ -73,11 +143,12 @@ public class View {
 	void start() {
 		board.open();
 		game.changeTurn();
+		if (game.isGameOver())
+			board.setTitle(game.getWinner());
 	}
 	
 	public static void main(String[] args) {
 		View gui = new View();
 		gui.start();
-		
 	}
 }
