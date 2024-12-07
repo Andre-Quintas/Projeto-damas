@@ -96,6 +96,8 @@ public class GameManager {
 	public void changeTurn() {
 		this.isBlackTurn = !this.isBlackTurn;
 		refreshRedSquares();
+		if (getPawnCount("black.png") == 0 || getPawnCount("white.png") == 0)
+			gameOver();
 		if ((!canAnyMove("black.png") && this.isBlackTurn) || (!canAnyMove("white.png") && !this.isBlackTurn))
 			gameOver();
 	}
