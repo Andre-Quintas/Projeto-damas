@@ -6,18 +6,21 @@ public class View {
 	Board board;
 	GameManager game;
 
+	//Construtor principal, "default", tamanho: 8
 	View() {
 		game = new GameManager();
 		board = new Board("Turno das " + (!game.getIsBlackTurn() ? "Pretas" : "Brancas"), 8, 8, 100);
 		viewSetup();
 	}
 	
+	//Construtor com tamanho definido, tamanho: size
 	View(int size) {
 		game = new GameManager(size);
 		board = new Board("Turno das " + (!game.getIsBlackTurn() ? "Pretas" : "Brancas"), size, size, 100);
 		viewSetup();
 	}
 	
+	//Construtor atraves de ficheiro, tamanho: mesmo tamanho do ficheiro utilizado
 	View(LoadData loadData) {
 		Pawn[][] newField = loadData.newField();
 		boolean isBlack = loadData.isBlack();
@@ -37,6 +40,7 @@ public class View {
 		board.addAction("carregar", this::load);
 	}
 	
+	//Funcao executada no botao "novo"
 	void newBoard() {
 		try {
 			int size = board.promptInt("Tamanho?");
@@ -47,6 +51,7 @@ public class View {
 		}
 	}
 	
+	//Funcao executada no botao "aleatoria"
 	void random() {
 		if (game.isGameOver())
 			return;
@@ -65,6 +70,7 @@ public class View {
 		}
 	}
 	
+	//Funcao executada no botao "gravar"
 	void save() {
 		try {
 			String fileName = board.promptText("Nome do Ficheiro?");
@@ -74,6 +80,7 @@ public class View {
 		}
 	}
 	
+	//Funcao executada no botao "carregar"
 	void load() {
 		try {
 			String fileName = board.promptText("Nome do Ficheiro?");
@@ -85,16 +92,19 @@ public class View {
 		}
 	}
 	
+	//Funcao executada quando o player clicka em alguma casa da board
 	void click(int line, int col) {
 		if (game.isGameOver())
 			return;
-		if (game.isRedSquare(new Position(line, col))) {
+		//caso click numa casa vermelha(jogador que tem jogada obrigatoria)
+		if (game.isRedSquare(new Position(line, col))) { 
 			game.setSelectedPawn(new Position(line, col));
 			game.clearYellowSquares();
 			Position[] newYellowSquares = game.getLegalMoves(game.getFieldPos(new Position(line, col)), line, col);
 			for (int i = 0; i < newYellowSquares.length; i++)
 				game.addYellowSquare(newYellowSquares[i]);
 		}
+		//caso click numa casa amarela(realiza o movimento de uma peca)
 		if (game.isYellowSquare(new Position(line, col)) && !game.isPawn(new Position(line, col))) {
 			game.movePawn(game.getSelectedPawn(), new Position(line, col));
 			game.clearYellowSquares();
@@ -103,6 +113,7 @@ public class View {
 			else 
 				game.changeTurn();	
 		}
+		//caso click numa casa sem incluir as operacoes passadas(qualquer casa nao amarela ou vermelha)
 		else if (!game.hasRedSquares()) {
 			game.clearYellowSquares();
 			if (game.isPawn(new Position(line, col))) {

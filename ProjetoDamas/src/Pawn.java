@@ -1,4 +1,4 @@
-
+//Classe Pawn, responsavel por gerir as propriedades dos peões
 public class Pawn {
 	
 	private String color; //"black.png" ou "white.png"
